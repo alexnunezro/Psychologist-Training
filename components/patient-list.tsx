@@ -56,16 +56,16 @@ export default function PatientList({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t.patientCases}</h2>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleList}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
         >
           {showPatientList ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
         </Button>
+        <h2 className="text-lg font-semibold">{t.patientCases}</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto">
