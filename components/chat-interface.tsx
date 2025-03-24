@@ -217,16 +217,20 @@ export default function ChatInterface({
         },
         body: JSON.stringify({
           messages: updatedMessages.map(msg => ({
-            role: msg.sender === "user" ? "user" : "assistant",
-            content: msg.text
+            sender: msg.sender,
+            text: msg.text
           })),
           patientInfo: {
             name: patient.name,
             age: patient.age,
             condition: patient.condition,
+            conditionEs: patient.conditionEs,
             symptoms: patient.symptoms,
-            triggers: patient.triggers
+            symptomsEs: patient.symptomsEs,
+            triggers: patient.triggers,
+            triggersEs: patient.triggersEs
           },
+          language,
           customPrompt
         }),
       })

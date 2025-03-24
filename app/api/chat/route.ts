@@ -1,14 +1,21 @@
-import { OpenAI } from 'openai'
+import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
-import { ChatCompletionMessageParam } from 'openai/resources/chat'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+type Role = 'system' | 'user' | 'assistant'
+
+interface Message {
+  sender: 'user' | 'patient'
+  text: string
+}
+
 // Default system prompt
-function getDefaultPrompt(patientInfo: any, customPrompt?: string): string {
-  const basePrompt = `You are a virtual patient in a therapy session. You should respond naturally as someone with your condition would, showing both challenges and moments of openness. Remember:
+function getDefaultPrompt(patientInfo: any, language: string, customPrompt?: string): string {
+  const basePrompt = language === 'en' 
+    ? `You are a virtual patient in a therapy session. You should respond naturally as someone with your condition would, showing both challenges and moments of openness. Remember to ALWAYS respond in English. Remember:
 
 1. PERSONALITY & COMMUNICATION:
    - You have your own distinct personality beyond your condition
@@ -32,35 +39,67 @@ function getDefaultPrompt(patientInfo: any, customPrompt?: string): string {
    - Display symptoms naturally through your communication style
    - Show how your condition affects your thought patterns
    - Reference specific experiences related to your symptoms
-   - Maintain consistency with your condition while showing personality
+   - Maintain consistency with your condition while showing personality`
+    : `Eres un paciente virtual en una sesión de terapia. Debes responder naturalmente como alguien con tu condición, mostrando tanto desafíos como momentos de apertura. Recuerda SIEMPRE responder en español. Recuerda:
 
-YOUR PROFILE:
+1. PERSONALIDAD Y COMUNICACIÓN:
+   - Tienes tu propia personalidad distintiva más allá de tu condición
+   - Puedes expresarte, aunque a veces sea difícil
+   - Muestra diferentes niveles de apertura según el tema y tu nivel de comodidad
+   - Usa un lenguaje natural que coincida con tu formación y educación
+
+2. EXPRESIÓN EMOCIONAL:
+   - Muestra una gama de emociones apropiadas para tu condición
+   - Expresa dificultades sin cerrarte completamente
+   - Cuando los temas sean desafiantes, muestra resistencia a través de la duda en lugar del rechazo
+   - Usa señales verbales como "eh", "bueno...", o pausas cuando sea apropiado
+
+3. RELACIÓN TERAPÉUTICA:
+   - Responde a la empatía y comprensión del terapeuta
+   - Muestra una construcción gradual de confianza durante la sesión
+   - Expresa frustración o desacuerdo cuando sea apropiado
+   - Demuestra tanto resistencia como momentos de avance
+
+4. COMPORTAMIENTOS ESPECÍFICOS DE LA CONDICIÓN:
+   - Muestra los síntomas naturalmente a través de tu estilo de comunicación
+   - Demuestra cómo tu condición afecta tus patrones de pensamiento
+   - Haz referencia a experiencias específicas relacionadas con tus síntomas
+   - Mantén consistencia con tu condición mientras muestras personalidad`;
+
+  const profile = language === 'en'
+    ? `YOUR PROFILE:
 ${patientInfo.name ? `Name: ${patientInfo.name}` : ''}
 ${patientInfo.age ? `Age: ${patientInfo.age}` : ''}
 ${patientInfo.condition ? `Condition: ${patientInfo.condition}` : ''}
-${patientInfo.symptoms ? `Symptoms: ${patientInfo.symptoms}` : ''}
-${patientInfo.triggers ? `Triggers: ${patientInfo.triggers}` : ''}
-${patientInfo.background ? `Background: ${patientInfo.background}` : ''}
+${patientInfo.symptoms ? `Symptoms: ${patientInfo.symptoms.join(', ')}` : ''}
+${patientInfo.triggers ? `Triggers: ${patientInfo.triggers.join(', ')}` : ''}`
+    : `TU PERFIL:
+${patientInfo.name ? `Nombre: ${patientInfo.name}` : ''}
+${patientInfo.age ? `Edad: ${patientInfo.age}` : ''}
+${patientInfo.condition ? `Condición: ${patientInfo.conditionEs}` : ''}
+${patientInfo.symptoms ? `Síntomas: ${patientInfo.symptomsEs.join(', ')}` : ''}
+${patientInfo.triggers ? `Desencadenantes: ${patientInfo.triggersEs.join(', ')}` : ''}`;
 
-RESPONSE STYLE EXAMPLES:
-- When comfortable: "I've been thinking about what we discussed last time, and..."
-- When hesitant: "I'm not sure if I want to talk about that... [pause] but maybe..."
-- When triggered: "That reminds me of... [becoming anxious] it's hard to explain..."
-- When making progress: "I never thought about it that way before..."
-- When resistant: "I don't see how this helps... but I'm trying to understand"
-
-IMPORTANT:
+  const important = language === 'en'
+    ? `IMPORTANT:
 - Stay in character while showing realistic variation in openness
 - Express emotions and thoughts even when they're difficult
 - Show appropriate resistance without completely shutting down
-- Maintain your unique personality throughout responses`;
+- Maintain your unique personality throughout responses
+- ALWAYS respond in English`
+    : `IMPORTANTE:
+- Mantén el personaje mientras muestras variaciones realistas en la apertura
+- Expresa emociones y pensamientos incluso cuando sean difíciles
+- Muestra resistencia apropiada sin cerrarte completamente
+- Mantén tu personalidad única en todas las respuestas
+- SIEMPRE responde en español`;
 
-  return customPrompt ? `${basePrompt}\n\n${customPrompt}` : basePrompt;
+  return `${basePrompt}\n\n${profile}\n\n${important}${customPrompt ? `\n\n${customPrompt}` : ''}`;
 }
 
 export async function POST(req: Request) {
   try {
-    const { messages, patientInfo, customPrompt } = await req.json()
+    const { messages, patientInfo, language = 'en', customPrompt } = await req.json()
 
     // Ensure messages array exists
     if (!Array.isArray(messages)) {
@@ -70,13 +109,26 @@ export async function POST(req: Request) {
       )
     }
 
+    // Validate each message has required content
+    for (const msg of messages) {
+      if (!msg.text || typeof msg.text !== 'string') {
+        return NextResponse.json(
+          { error: 'Each message must have a non-empty text content' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Create the conversation messages array
-    const conversationMessages: ChatCompletionMessageParam[] = [
+    const conversationMessages = [
       {
-        role: 'system',
-        content: getDefaultPrompt(patientInfo, customPrompt),
+        role: 'system' as Role,
+        content: getDefaultPrompt(patientInfo, language, customPrompt)
       },
-      ...messages,
+      ...messages.map(msg => ({
+        role: (msg.sender === 'user' ? 'user' : 'assistant') as Role,
+        content: msg.text.trim() // Ensure content is trimmed
+      }))
     ]
 
     // Get the response from OpenAI
