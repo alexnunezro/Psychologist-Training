@@ -10,7 +10,7 @@ import type { Patient } from "@/types/patient"
 import PatientEditor from "@/components/patient-editor"
 import { useMobileDetect } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { PanelRightClose, PanelRightOpen } from "lucide-react"
 
 export default function Home() {
   const [selectedPatient, setSelectedPatient] = useState(patientsData[0])
@@ -95,6 +95,8 @@ export default function Home() {
           onBack={() => setShowChat(false)}
           isMobile={isMobileScreen}
           onDeleteConversation={deleteConversation}
+          showPatientList={showPatientList}
+          onToggleList={() => setShowPatientList(!showPatientList)}
         />
       </div>
 
@@ -113,16 +115,6 @@ export default function Home() {
         
         {/* Toggle buttons container */}
         <div className="absolute top-4 right-4 z-10 hidden md:flex gap-2">
-          {/* Patient list toggle button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowPatientList(!showPatientList)}
-            className="bg-white dark:bg-gray-800"
-          >
-            {showPatientList ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-          </Button>
-
           {/* Patient info toggle button */}
           <Button
             variant="outline"

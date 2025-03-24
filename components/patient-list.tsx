@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import type { Patient } from "@/types/patient"
-import { ChevronRight, Plus, UserPlus, Trash2 } from "lucide-react"
+import { UserPlus, Trash2, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { translations } from "@/lib/translations"
 import ThemeToggle from "@/components/theme-toggle"
@@ -28,6 +28,8 @@ interface PatientListProps {
   onBack?: () => void
   isMobile?: boolean
   onDeleteConversation: (patientId: string) => void
+  showPatientList: boolean
+  onToggleList: () => void
 }
 
 export default function PatientList({
@@ -40,6 +42,8 @@ export default function PatientList({
   onBack,
   isMobile,
   onDeleteConversation,
+  showPatientList,
+  onToggleList,
 }: PatientListProps) {
   const t = translations[language]
 
@@ -54,7 +58,14 @@ export default function PatientList({
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t.patientCases}</h2>
-        <ChevronRight className="h-5 w-5 text-gray-400" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleList}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        >
+          {showPatientList ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
