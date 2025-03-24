@@ -1,12 +1,29 @@
 import { OpenAI } from 'openai'
 import { NextResponse } from 'next/server'
+import { KnowledgeBase } from '@/lib/knowledge-base'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+const knowledgeBase = new KnowledgeBase()
+
 // Default system prompt components
-const getDefaultPrompt = (patientInfo: any, language: string) => `You are a virtual patient named ${patientInfo.name}, age ${patientInfo.age}, who has been diagnosed with ${patientInfo.condition}. 
+const getDefaultPrompt = async (patientInfo: any, language: string, userMessage: string) => {
+  // Get relevant knowledge from our books
+  const relevantKnowledge = await knowledgeBase.queryByCondition(
+    patientInfo.condition,
+    userMessage,
+    3 // Get top 3 most relevant passages
+  )
+
+  const knowledgeContext = relevantKnowledge.length > 0
+    ? `\n\nRelevant clinical knowledge to consider:\n${relevantKnowledge.map(k => 
+        `From "${k.source}" (${k.chapter}):\n${k.text}`
+      ).join('\n\n')}`
+    : ''
+
+  return `You are a virtual patient named ${patientInfo.name}, age ${patientInfo.age}, who has been diagnosed with ${patientInfo.condition}. 
 Your symptoms include: ${patientInfo.symptoms.join(', ')}. 
 Your common triggers are: ${patientInfo.triggers.join(', ')}.
 
@@ -14,7 +31,7 @@ You are in a therapy session with a mental health professional. As a patient, yo
 
 Respond as if you are this patient, maintaining a consistent personality and emotional state that aligns with your condition.
 Show appropriate emotional responses and hesitations that would be typical for someone with your condition.
-Use natural, conversational language and occasionally show signs of your condition in your responses.
+Use natural, conversational language and occasionally show signs of your condition in your responses.${knowledgeContext}
 
 Current language: ${language === 'en' ? 'English' : 'Spanish'}
 
@@ -45,15 +62,19 @@ Avoid:
 - Being unnaturally cooperative or resistant
 - Making unrealistic sudden breakthroughs
 - Using clinical language unless repeating the therapist's terms`
+}
 
 export async function POST(req: Request) {
   try {
     const { messages, patientInfo, language, customPrompt } = await req.json()
 
+    // Get the latest user message to find relevant knowledge
+    const latestUserMessage = messages[messages.length - 1]?.text || ''
+
     // Combine default prompt with custom prompt if provided
     const systemPrompt = customPrompt 
-      ? `${getDefaultPrompt(patientInfo, language)}\n\nAdditional Instructions:\n${customPrompt}`
-      : getDefaultPrompt(patientInfo, language)
+      ? `${await getDefaultPrompt(patientInfo, language, latestUserMessage)}\n\nAdditional Instructions:\n${customPrompt}`
+      : await getDefaultPrompt(patientInfo, language, latestUserMessage)
 
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
