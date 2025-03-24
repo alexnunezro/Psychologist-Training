@@ -10,7 +10,7 @@ import type { Patient } from "@/types/patient"
 import PatientEditor from "@/components/patient-editor"
 import { useMobileDetect } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
-import { PanelRightClose, PanelRightOpen } from "lucide-react"
+import { PanelRightClose, PanelRightOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 export default function Home() {
   const [selectedPatient, setSelectedPatient] = useState(patientsData[0])
@@ -100,6 +100,18 @@ export default function Home() {
         />
       </div>
 
+      {/* Patient list toggle button - always visible on desktop */}
+      <div className="hidden md:block fixed left-4 top-4 z-20">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setShowPatientList(!showPatientList)}
+          className="bg-white dark:bg-gray-800 shadow-md"
+        >
+          {showPatientList ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+        </Button>
+      </div>
+
       {/* Chat interface - hidden on mobile when no patient selected or when viewing patient list */}
       <div
         className={`${!selectedPatient || (isMobileScreen && !showChat) ? "hidden md:flex" : "flex"} flex-1 flex-col relative`}
@@ -113,9 +125,8 @@ export default function Home() {
           isMobile={isMobileScreen}
         />
         
-        {/* Toggle buttons container */}
-        <div className="absolute top-4 right-4 z-10 hidden md:flex gap-2">
-          {/* Patient info toggle button */}
+        {/* Patient info toggle button */}
+        <div className="absolute top-4 right-4 z-10 hidden md:block">
           <Button
             variant="outline"
             size="icon"
@@ -132,9 +143,11 @@ export default function Home() {
         <PatientInfo patient={selectedPatient} language={language} />
       </div>
 
-      {/* Language toggle */}
-      <div className="fixed bottom-4 left-4 z-10">
-        <LanguageToggle language={language} setLanguage={setLanguage} />
+      {/* Language toggle - fixed to bottom left with proper z-index and padding */}
+      <div className="fixed bottom-4 left-4 z-30">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-1">
+          <LanguageToggle language={language} setLanguage={setLanguage} />
+        </div>
       </div>
 
       {/* Patient editor modal */}
