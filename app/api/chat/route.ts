@@ -141,13 +141,21 @@ export async function POST(req: Request) {
     const conversationMessages = [
       {
         role: 'system' as Role,
-        content: getDefaultPrompt(patientInfo, language, customPrompt)
+        content: getDefaultPrompt(patientInfo, language, customPrompt) || ''
       },
       ...messages.map(msg => ({
         role: (msg.sender === 'user' ? 'user' : 'assistant') as Role,
-        content: msg.text.trim() // Ensure content is trimmed
+        content: (msg.text || '').trim() // Ensure content is never null and is trimmed
       }))
     ]
+
+    // Validate all messages have content
+    if (conversationMessages.some(msg => !msg.content)) {
+      return NextResponse.json(
+        { error: 'All messages must have content' },
+        { status: 400 }
+      )
+    }
 
     // Get the response from OpenAI
     const response = await openai.chat.completions.create({
