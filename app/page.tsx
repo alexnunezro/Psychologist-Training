@@ -10,7 +10,7 @@ import type { Patient } from "@/types/patient"
 import PatientEditor from "@/components/patient-editor"
 import { useMobileDetect } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
-import { PanelRightClose, PanelRightOpen } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react"
 
 export default function Home() {
   const [selectedPatient, setSelectedPatient] = useState(patientsData[0])
@@ -26,6 +26,7 @@ export default function Home() {
   const isMobileScreen = useMobileDetect()
   const [showChat, setShowChat] = useState(false)
   const [showPatientInfo, setShowPatientInfo] = useState(true)
+  const [showPatientList, setShowPatientList] = useState(true)
 
   const deleteConversation = (patientId: string) => {
     // Remove the patient from the patients list
@@ -73,7 +74,10 @@ export default function Home() {
     <main className="flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900">
       {/* Patient list sidebar - full width on mobile, fixed width on desktop */}
       <div
-        className={`${showChat && isMobileScreen ? "hidden" : "block"} w-full md:w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobileScreen ? "h-screen" : ""}`}
+        className={`${showChat && isMobileScreen ? "hidden" : ""} 
+          ${showPatientList ? "md:block" : "md:hidden"} 
+          w-full md:w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 
+          ${isMobileScreen ? "h-screen" : ""}`}
       >
         <PatientList
           patients={patients}
@@ -107,8 +111,19 @@ export default function Home() {
           isMobile={isMobileScreen}
         />
         
-        {/* Patient info toggle button */}
-        <div className="absolute top-4 right-4 z-10 hidden md:block">
+        {/* Toggle buttons container */}
+        <div className="absolute top-4 right-4 z-10 hidden md:flex gap-2">
+          {/* Patient list toggle button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowPatientList(!showPatientList)}
+            className="bg-white dark:bg-gray-800"
+          >
+            {showPatientList ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+          </Button>
+
+          {/* Patient info toggle button */}
           <Button
             variant="outline"
             size="icon"
