@@ -7,9 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Psychologist Training Chatbot",
-  description: "A training platform for psychologists to practice with virtual patients",
-    generator: 'v0.dev'
+  title: "Virtual Patient Simulator - Psychologist Training Platform",
+  description: "An interactive training platform for psychologists to practice with AI-powered virtual patients",
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
