@@ -15,6 +15,7 @@ export interface Patient {
   therapeuticApproachesEs: string[]
   pitfalls: string[]
   pitfallsEs: string[]
+  background?: string
   responses: {
     [key: string]: string[]
   }

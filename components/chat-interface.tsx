@@ -194,110 +194,65 @@ export default function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || hasPatientLeft) return
+  const sendMessage = async (text: string) => {
+    if (!text.trim()) return
 
-    const { isNegative, triggerType, severity } = detectNegativeTherapistBehavior(inputValue, patient)
-
-    // Add user message
-    const userMessage: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
       sender: "user",
-      text: inputValue,
+      text,
       timestamp: new Date(),
-      sentiment: isNegative ? "negative" : "neutral"
     }
 
-    const newMessages = [...messages, userMessage]
-    updateMessages(newMessages)
-    setInputValue("")
-    setIsTyping(true)
+    const updatedMessages = [...messages, newMessage]
+    updateMessages(updatedMessages)
 
     try {
-      let response
-      
-      if (isNegative && triggerType) {
-        // Update discomfort level
-        const newDiscomfortLevel = discomfortLevel + severity
-        setDiscomfortLevel(newDiscomfortLevel)
-
-        // If accumulated discomfort is high enough or severity is high, patient leaves
-        const shouldLeave = newDiscomfortLevel > 1.5 || severity > 0.8
-
-        // Patient response based on trigger type and severity
-        const patientMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: "patient",
-          text: getPatientResponse(language, patient, triggerType, severity),
-          timestamp: new Date(),
-          sentiment: "negative",
-          triggerType,
-          isPatientLeaving: shouldLeave
-        }
-
-        if (shouldLeave) {
-          setHasPatientLeft(true)
-        }
-
-        setIsTyping(false)
-        updateMessages([...newMessages, patientMessage])
-        return
-      }
-
-      // Normal flow for non-negative interactions
-      response = await fetch('/api/chat', {
-        method: 'POST',
+      const response = await fetch("/api/chat", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: newMessages,
+          messages: updatedMessages.map(msg => ({
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.text
+          })),
           patientInfo: {
             name: patient.name,
             age: patient.age,
             condition: patient.condition,
             symptoms: patient.symptoms,
-            triggers: patient.triggers,
+            triggers: patient.triggers
           },
-          language,
           customPrompt
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response')
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
       
-      // Add AI response
-      const patientMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const patientResponse: Message = {
+        id: Date.now().toString(),
         sender: "patient",
-        text: data.response,
+        text: data.content,
         timestamp: new Date(),
-        sentiment: "neutral"
       }
 
-      // Reduce discomfort level slightly for positive interactions
-      setDiscomfortLevel(Math.max(0, discomfortLevel - 0.1))
-
-      setIsTyping(false)
-      updateMessages([...newMessages, patientMessage])
+      updateMessages([...updatedMessages, patientResponse])
     } catch (error) {
-      console.error('Error getting AI response:', error)
-      // Add error message
+      console.error("Error sending message:", error)
+      // Add error message to chat
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString(),
         sender: "patient",
-        text: language === "en" 
-          ? "I'm sorry, I'm not feeling well right now. Can we talk later?" 
-          : "Lo siento, no me siento bien ahora. ¿Podemos hablar más tarde?",
+        text: language === "en" ? "I'm sorry, I'm having trouble responding right now." : "Lo siento, tengo problemas para responder en este momento.",
         timestamp: new Date(),
-        sentiment: "negative"
       }
-      setIsTyping(false)
-      updateMessages([...newMessages, errorMessage])
+      updateMessages([...updatedMessages, errorMessage])
     }
   }
 
@@ -309,6 +264,53 @@ export default function ChatInterface({
       setHasPatientLeft(false)
       setDiscomfortLevel(0) // Reset discomfort level when resetting the conversation
     }
+  }
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || hasPatientLeft) return
+
+    const { isNegative, triggerType, severity } = detectNegativeTherapistBehavior(inputValue, patient)
+
+    if (isNegative && triggerType) {
+      // Update discomfort level
+      const newDiscomfortLevel = discomfortLevel + severity
+      setDiscomfortLevel(newDiscomfortLevel)
+
+      // If accumulated discomfort is high enough or severity is high, patient leaves
+      const shouldLeave = newDiscomfortLevel > 1.5 || severity > 0.8
+
+      // Patient response based on trigger type and severity
+      const patientMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: "patient",
+        text: getPatientResponse(language, patient, triggerType, severity),
+        timestamp: new Date(),
+        sentiment: "negative",
+        triggerType,
+        isPatientLeaving: shouldLeave
+      }
+
+      if (shouldLeave) {
+        setHasPatientLeft(true)
+      }
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        sender: "user",
+        text: inputValue,
+        timestamp: new Date(),
+        sentiment: "negative"
+      }
+
+      const newMessages = [...messages, userMessage, patientMessage]
+      setInputValue("")
+      updateMessages(newMessages)
+      return
+    }
+
+    // For non-negative interactions, use the new sendMessage function
+    await sendMessage(inputValue)
+    setInputValue("")
   }
 
   return (
