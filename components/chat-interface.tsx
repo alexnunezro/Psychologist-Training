@@ -198,6 +198,7 @@ export default function ChatInterface({
     if (!text.trim()) return
 
     setInputValue("") // Clear input immediately
+    setIsTyping(true) // Show typing animation
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -259,6 +260,8 @@ export default function ChatInterface({
         timestamp: new Date(),
       }
       updateMessages([...updatedMessages, errorMessage])
+    } finally {
+      setIsTyping(false) // Hide typing animation
     }
   }
 
@@ -522,10 +525,10 @@ export default function ChatInterface({
               />
             </div>
             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2">
-              <div className="flex gap-1">
-                <span className="animate-bounce">•</span>
-                <span className="animate-bounce delay-100">•</span>
-                <span className="animate-bounce delay-200">•</span>
+              <div className="flex gap-2">
+                <span className="animate-bounce delay-0">.</span>
+                <span className="animate-bounce delay-150">.</span>
+                <span className="animate-bounce delay-300">.</span>
               </div>
             </div>
           </div>
