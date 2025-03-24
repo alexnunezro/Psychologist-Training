@@ -197,6 +197,8 @@ export default function ChatInterface({
   const sendMessage = async (text: string) => {
     if (!text.trim()) return
 
+    setInputValue("") // Clear input immediately
+
     const newMessage: Message = {
       id: Date.now().toString(),
       sender: "user",
@@ -269,7 +271,10 @@ export default function ChatInterface({
   const handleSendMessage = async () => {
     if (!inputValue.trim() || hasPatientLeft) return
 
-    const { isNegative, triggerType, severity } = detectNegativeTherapistBehavior(inputValue, patient)
+    const messageText = inputValue // Store the input value
+    setInputValue("") // Clear input immediately
+
+    const { isNegative, triggerType, severity } = detectNegativeTherapistBehavior(messageText, patient)
 
     if (isNegative && triggerType) {
       // Update discomfort level
@@ -297,20 +302,18 @@ export default function ChatInterface({
       const userMessage: Message = {
         id: Date.now().toString(),
         sender: "user",
-        text: inputValue,
+        text: messageText,
         timestamp: new Date(),
         sentiment: "negative"
       }
 
       const newMessages = [...messages, userMessage, patientMessage]
-      setInputValue("")
       updateMessages(newMessages)
       return
     }
 
     // For non-negative interactions, use the new sendMessage function
-    await sendMessage(inputValue)
-    setInputValue("")
+    await sendMessage(messageText)
   }
 
   return (
