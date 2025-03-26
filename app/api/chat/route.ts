@@ -1,30 +1,14 @@
 import { OpenAI } from 'openai'
-import { KnowledgeBase } from '@/lib/knowledge-base'
+import { queryByCondition } from '@/lib/knowledge-base'
 import { NextResponse } from 'next/server'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-const knowledgeBase = new KnowledgeBase()
-let isInitialized = false
-
-async function initializeKnowledgeBase() {
-  if (!isInitialized) {
-    try {
-      await knowledgeBase.initialize()
-      isInitialized = true
-    } catch (error) {
-      console.error('Failed to initialize knowledge base:', error)
-    }
-  }
-}
-
 async function getDefaultPrompt(condition: string, userMessage: string, language: string = 'en') {
-  await initializeKnowledgeBase()
-  
   // Get relevant knowledge based on the patient's condition and latest message
-  const relevantKnowledge = await knowledgeBase.queryByCondition(condition, userMessage)
+  const relevantKnowledge = await queryByCondition(condition, userMessage)
   
   // Format the knowledge context
   const knowledgeContext = relevantKnowledge.slice(0, 3).map(entry => 
