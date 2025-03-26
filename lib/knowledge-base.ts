@@ -1,15 +1,4 @@
-import { ChromaClient, IEmbeddingFunction } from 'chromadb'
-import { pipeline } from '@xenova/transformers'
-
-// Initialize the embedding model
-let embedder: any = null
-
-async function getEmbedder() {
-  if (!embedder) {
-    embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
-  }
-  return embedder
-}
+import { ChromaClient } from 'chromadb'
 
 export interface BookEntry {
   text: string
@@ -33,25 +22,9 @@ export class KnowledgeBase {
     if (this.initialized) return
 
     try {
-      // Initialize the embedder
-      const embedder = await getEmbedder()
-
-      // Create a custom embedding function
-      const embeddingFunction: IEmbeddingFunction = {
-        generate: async (texts: string[]): Promise<number[][]> => {
-          const embeddings: number[][] = []
-          for (const text of texts) {
-            const output = await embedder(text, { pooling: 'mean', normalize: true })
-            embeddings.push(Array.from(output.data) as number[])
-          }
-          return embeddings
-        }
-      }
-
       // Create or get the collection
       this.collection = await this.client.getOrCreateCollection({
         name: "psychological_knowledge",
-        embeddingFunction,
         metadata: {
           description: "Psychological disorders knowledge base from professional literature"
         }
