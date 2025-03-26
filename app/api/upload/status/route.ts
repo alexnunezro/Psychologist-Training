@@ -3,15 +3,6 @@ import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { getProcessingStatus } from '@/lib/upload-status'
 
-// In-memory storage for processing status
-// In a production environment, this should be replaced with a database
-const processingStatus = new Map<string, {
-  status: 'pending' | 'processing' | 'completed' | 'error'
-  error?: string
-  progress?: number
-  timestamp: number
-}>()
-
 export async function GET() {
   try {
     const booksDir = join(process.cwd(), 'books')
@@ -58,18 +49,4 @@ export async function GET() {
       { status: 500 }
     )
   }
-}
-
-// Helper function to update status (can be called from other parts of the application)
-export function updateStatus(
-  filename: string,
-  status: 'pending' | 'processing' | 'completed' | 'error',
-  details?: { error?: string; progress?: number }
-) {
-  processingStatus.set(filename, {
-    status,
-    error: details?.error,
-    progress: details?.progress,
-    timestamp: Date.now()
-  })
 } 
