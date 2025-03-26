@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { KnowledgeBase } from '../lib/knowledge-base';
+import { addEntry, type BookEntry } from '../lib/knowledge-base';
 
 const BOOKS_DIR = path.join(process.cwd(), 'books');
 
@@ -10,9 +10,6 @@ async function processBook(filePath: string): Promise<void> {
   
   // Split content into manageable chunks (e.g., by chapters or sections)
   const chunks = content.split(/\n(?=Chapter|\d+\.|Section)/);
-  
-  const knowledgeBase = new KnowledgeBase();
-  await knowledgeBase.initialize();
   
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i].trim();
@@ -25,14 +22,16 @@ async function processBook(filePath: string): Promise<void> {
     // Detect psychological conditions mentioned in the chunk
     const conditions = detectConditions(chunk);
     
-    await knowledgeBase.addEntry({
+    const entry: BookEntry = {
       text: chunk,
       source: fileName,
       page: i + 1, // Approximate page number
       chapter,
       condition: conditions.join(', '),
       tags: [...conditions, 'psychology', 'disorder']
-    });
+    };
+    
+    await addEntry(entry);
   }
 }
 

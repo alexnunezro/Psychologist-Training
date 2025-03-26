@@ -10,7 +10,7 @@ import type { Patient } from "@/types/patient"
 import { translations, type Translation } from "@/lib/translations"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dice5, Save, X } from "lucide-react"
-import { generateRandomPatient } from "@/lib/patient-generator"
+import { generateRandomPatient } from "@/lib/patient-generator-new"
 
 // Type guard for array fields
 type ArrayFields = keyof Pick<
@@ -190,8 +190,8 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
   }
 
   const generateRandom = () => {
-    const randomPatient = generateRandomPatient(patientData.id)
-    setPatientData(randomPatient)
+    const typedPatient = generateRandomPatient(String(Math.random()))
+    setPatientData(typedPatient)
   }
 
   return (
@@ -475,16 +475,12 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
 
                 {patientData.responses[category].map((response, index) => (
                   <div key={`response-${category}-${index}`} className="flex gap-2 mb-2">
-                    <Textarea
-                      value={response}
-                      onChange={(e) => handleResponseChange(category, index, e.target.value)}
-                      className="min-h-[80px]"
-                    />
+                    <Input value={response} onChange={(e) => handleResponseChange(category, index, e.target.value)} />
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => removeResponseItem(category, index)}
-                      disabled={patientData.responses[category].length <= 1 && category === "default"}
+                      disabled={patientData.responses[category].length <= 1}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -502,7 +498,7 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
             </div>
 
             {Object.keys(patientData.responsesEs).map((category) => (
-              <div key={`responseEs-${category}`} className="mb-6 border p-4 rounded-md">
+              <div key={`response-${category}`} className="mb-6 border p-4 rounded-md">
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-lg font-medium">{category}</Label>
                   <Button variant="outline" size="sm" onClick={() => addResponseItem(category, true)}>
@@ -511,17 +507,13 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
                 </div>
 
                 {patientData.responsesEs[category].map((response, index) => (
-                  <div key={`responseEs-${category}-${index}`} className="flex gap-2 mb-2">
-                    <Textarea
-                      value={response}
-                      onChange={(e) => handleResponseChange(category, index, e.target.value, true)}
-                      className="min-h-[80px]"
-                    />
+                  <div key={`response-${category}-${index}`} className="flex gap-2 mb-2">
+                    <Input value={response} onChange={(e) => handleResponseChange(category, index, e.target.value, true)} />
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => removeResponseItem(category, index, true)}
-                      disabled={patientData.responsesEs[category].length <= 1 && category === "default"}
+                      disabled={patientData.responsesEs[category].length <= 1}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -532,24 +524,12 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <Button variant="outline" onClick={generateRandom} className="flex items-center gap-2 w-full md:w-auto">
-            <Dice5 className="h-4 w-4" />
-            {t.generateRandom}
+        <DialogFooter>
+          <Button type="submit" onClick={() => onSave(patientData)}>
+            {t.save}
           </Button>
-
-          <div className="flex gap-2 w-full md:w-auto">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              {t.cancel}
-            </Button>
-            <Button onClick={() => onSave(patientData)} className="flex items-center gap-2 flex-1">
-              <Save className="h-4 w-4" />
-              {t.save}
-            </Button>
-          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

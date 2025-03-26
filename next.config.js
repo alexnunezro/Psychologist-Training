@@ -14,6 +14,12 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['chromadb', 'onnxruntime-node'],
   },
+  // Add output configuration for better deployment
+  output: 'standalone',
+  // Add environment variable handling
+  env: {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  },
 }
 
 module.exports = nextConfig 
