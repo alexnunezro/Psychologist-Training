@@ -59,6 +59,11 @@ export default function UploadPage() {
       if (fileInput) {
         fileInput.value = ''
       }
+
+      // Redirect to status page after 1 second
+      setTimeout(() => {
+        router.push('/upload/status')
+      }, 1000)
     } catch (error) {
       console.error('Upload error:', error)
       setError(error instanceof Error ? error.message : 'Failed to upload files. Please try again.')
