@@ -218,8 +218,8 @@ export default function ChatInterface({
         },
         body: JSON.stringify({
           messages: updatedMessages.map(msg => ({
-            sender: msg.sender,
-            text: msg.text
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.text
           })),
           patientInfo: {
             name: patient.name,
