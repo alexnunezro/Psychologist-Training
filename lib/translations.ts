@@ -1,3 +1,9 @@
+export type TranslationKey = keyof typeof translations.en
+
+export type Translation = {
+  [K in TranslationKey]: string
+}
+
 export const translations = {
   en: {
     patientCases: "Patient Cases",
@@ -33,6 +39,12 @@ export const translations = {
     lastMessage: "Last Message",
     back: "Back",
     viewPatientInfo: "View Patient Info",
+    symptoms: "Symptoms",
+    symptomsEs: "Síntomas",
+    triggers: "Triggers",
+    triggersEs: "Desencadenantes",
+    pitfalls: "Pitfalls",
+    pitfallsEs: "Errores",
   },
   es: {
     patientCases: "Casos de Pacientes",
@@ -68,6 +80,12 @@ export const translations = {
     lastMessage: "Último Mensaje",
     back: "Volver",
     viewPatientInfo: "Ver Información del Paciente",
+    symptoms: "Síntomas",
+    symptomsEs: "Síntomas",
+    triggers: "Desencadenantes",
+    triggersEs: "Desencadenantes",
+    pitfalls: "Errores",
+    pitfallsEs: "Errores",
   },
 }
 

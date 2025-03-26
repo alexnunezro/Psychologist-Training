@@ -7,10 +7,36 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { Patient } from "@/types/patient"
-import { translations } from "@/lib/translations"
+import { translations, type Translation } from "@/lib/translations"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dice5, Save, X } from "lucide-react"
 import { generateRandomPatient } from "@/lib/patient-generator"
+
+// Type guard for array fields
+type ArrayFields = keyof Pick<
+  Patient,
+  | "symptoms"
+  | "symptomsEs"
+  | "triggers"
+  | "triggersEs"
+  | "therapeuticApproaches"
+  | "therapeuticApproachesEs"
+  | "pitfalls"
+  | "pitfallsEs"
+>
+
+function isArrayField(field: string): field is ArrayFields {
+  return [
+    "symptoms",
+    "symptomsEs",
+    "triggers",
+    "triggersEs",
+    "therapeuticApproaches",
+    "therapeuticApproachesEs",
+    "pitfalls",
+    "pitfallsEs",
+  ].includes(field)
+}
 
 interface PatientEditorProps {
   patient: Patient | null
@@ -20,7 +46,7 @@ interface PatientEditorProps {
 }
 
 export default function PatientEditor({ patient, onClose, onSave, language }: PatientEditorProps) {
-  const t = translations[language]
+  const t: Translation = translations[language]
   const [patientData, setPatientData] = useState<Patient>(
     patient || {
       id: Date.now().toString(),
@@ -48,7 +74,7 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
     },
   )
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof Patient, value: any) => {
     setPatientData((prev) => ({
       ...prev,
       [field]: value,
@@ -56,6 +82,8 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
   }
 
   const handleArrayChange = (field: string, index: number, value: string) => {
+    if (!isArrayField(field)) return
+
     setPatientData((prev) => {
       const newArray = [...prev[field]]
       newArray[index] = value
@@ -67,6 +95,8 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
   }
 
   const addArrayItem = (field: string) => {
+    if (!isArrayField(field)) return
+
     setPatientData((prev) => ({
       ...prev,
       [field]: [...prev[field], ""],
@@ -74,6 +104,8 @@ export default function PatientEditor({ patient, onClose, onSave, language }: Pa
   }
 
   const removeArrayItem = (field: string, index: number) => {
+    if (!isArrayField(field)) return
+
     setPatientData((prev) => {
       const newArray = [...prev[field]]
       newArray.splice(index, 1)
