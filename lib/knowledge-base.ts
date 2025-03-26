@@ -1,4 +1,8 @@
+// This file is server-only
+'use server'
+
 import { ChromaClient } from 'chromadb'
+import { OpenAIEmbeddingFunction } from 'chromadb'
 
 export interface BookEntry {
   text: string
@@ -9,30 +13,32 @@ export interface BookEntry {
   tags: string[]
 }
 
+// Only initialize ChromaDB on the server
+let chromaClient: ChromaClient | null = null
+let embeddingFunction: OpenAIEmbeddingFunction | null = null
+
+if (typeof window === 'undefined') {
+  chromaClient = new ChromaClient()
+  embeddingFunction = new OpenAIEmbeddingFunction({
+    openai_api_key: process.env.OPENAI_API_KEY!,
+  })
+}
+
 export class KnowledgeBase {
   private collection: any
-  private initialized: boolean = false
-  private client: ChromaClient
-
-  constructor() {
-    this.client = new ChromaClient()
-  }
 
   async initialize() {
-    if (this.initialized) return
-
+    if (!chromaClient) {
+      throw new Error('ChromaDB can only be used on the server side')
+    }
+    
     try {
-      // Create or get the collection
-      this.collection = await this.client.getOrCreateCollection({
-        name: "psychological_knowledge",
-        metadata: {
-          description: "Psychological disorders knowledge base from professional literature"
-        }
+      this.collection = await chromaClient.getOrCreateCollection({
+        name: "psychology_books",
+        embeddingFunction: embeddingFunction!,
       })
-
-      this.initialized = true
     } catch (error) {
-      console.error('Failed to initialize knowledge base:', error)
+      console.error('Error initializing ChromaDB collection:', error)
       throw error
     }
   }

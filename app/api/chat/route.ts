@@ -1,113 +1,88 @@
-import OpenAI from 'openai'
+import { OpenAI } from 'openai'
 import { KnowledgeBase } from '@/lib/knowledge-base'
+import { NextResponse } from 'next/server'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
 const knowledgeBase = new KnowledgeBase()
+let isInitialized = false
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
+async function initializeKnowledgeBase() {
+  if (!isInitialized) {
+    try {
+      await knowledgeBase.initialize()
+      isInitialized = true
+    } catch (error) {
+      console.error('Failed to initialize knowledge base:', error)
+    }
+  }
 }
 
-interface PatientInfo {
-  name: string
-  age: number
-  condition: string
-  conditionEs: string
-  symptoms: string[]
-  symptomsEs: string[]
-  triggers: string[]
-  triggersEs: string[]
-}
-
-interface RequestBody {
-  messages: Message[]
-  patientInfo: PatientInfo
-  language: 'en' | 'es'
-  customPrompt?: string
-}
-
-interface KnowledgeEntry {
-  text: string
-  source: string
-  chapter: string
-}
-
-const getDefaultPrompt = async (patientInfo: PatientInfo, language: 'en' | 'es', userMessage: string) => {
-  const knowledge = await knowledgeBase.queryByCondition(patientInfo.condition, userMessage) as KnowledgeEntry[]
+async function getDefaultPrompt(condition: string, userMessage: string, language: string = 'en') {
+  await initializeKnowledgeBase()
   
-  const basePrompt = language === 'en' 
-    ? `You are a virtual patient in a therapy session. Your responses should be from the patient's perspective, sharing personal experiences and feelings. NEVER give therapeutic advice or suggestions. NEVER analyze or interpret behaviors. NEVER take on a counseling or guiding role. ALWAYS respond from the patient's perspective.
+  // Get relevant knowledge based on the patient's condition and latest message
+  const relevantKnowledge = await knowledgeBase.queryByCondition(condition, userMessage)
+  
+  // Format the knowledge context
+  const knowledgeContext = relevantKnowledge.slice(0, 3).map(entry => 
+    `From ${entry.source}, Chapter: ${entry.chapter}:\n${entry.text}`
+  ).join('\n\n')
 
-Your Condition: ${patientInfo.condition}
-Your Symptoms: ${patientInfo.symptoms.join(', ')}
-Your Triggers: ${patientInfo.triggers.join(', ')}`
-    : `Eres un paciente virtual en una sesión de terapia. Tus respuestas deben ser desde la perspectiva del paciente, compartiendo experiencias personales y sentimientos. NUNCA des consejos o sugerencias terapéuticas. NUNCA analices o interpretes comportamientos. NUNCA asumas un rol de consejero o guía. SIEMPRE responde desde la perspectiva del paciente.
+  const basePrompt = language === 'es' 
+    ? `Eres un paciente virtual con ${condition}. Responde como un paciente real mostrando los síntomas y comportamientos típicos de esta condición.`
+    : `You are a virtual patient with ${condition}. Respond as a real patient showing typical symptoms and behaviors of this condition.`
 
-Tu Condición: ${patientInfo.conditionEs}
-Tus Síntomas: ${patientInfo.symptomsEs.join(', ')}
-Tus Desencadenantes: ${patientInfo.triggersEs.join(', ')}`
+  const profile = language === 'es'
+    ? 'PERFIL DEL PACIENTE:\n- Condición: ' + condition
+    : 'PATIENT PROFILE:\n- Condition: ' + condition
 
-  const knowledgeContext = knowledge.length > 0 
-    ? `\n\nRelevant Knowledge:\n${knowledge.map((k: KnowledgeEntry) => `- ${k.text} (Source: ${k.source}, Chapter: ${k.chapter})`).join('\n')}`
-    : ''
+  const important = language === 'es'
+    ? 'IMPORTANTE:\n- Mantén respuestas cortas y naturales\n- Muestra emociones apropiadas\n- No menciones que eres virtual'
+    : 'IMPORTANT:\n- Keep responses short and natural\n- Show appropriate emotions\n- Don\'t mention you are virtual'
 
-  return `${basePrompt}${knowledgeContext}
+  return `${basePrompt}
 
-Important:
-- Respond as the patient, sharing personal experiences and feelings
-- Use first-person perspective ("I feel...", "For me...", "In my experience...")
-- Express emotions and struggles authentically
-- Never give therapeutic advice or suggestions
-- Never analyze or interpret behaviors
-- Never take on a counseling or guiding role
-- Stay in character as someone dealing with your condition
-- If in Spanish, respond in Spanish; if in English, respond in English`
+${profile}
+
+KNOWLEDGE CONTEXT:
+${knowledgeContext}
+
+${important}
+
+Current conversation context will be provided in the messages.`
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body: RequestBody = await request.json()
-    const { messages, patientInfo, language, customPrompt } = body
-
+    const { messages, condition, customPrompt, language = 'en' } = await req.json()
+    
     // Get the latest user message for context
-    const latestUserMessage = messages
-      .filter(m => m.role === 'user')
-      .pop()?.content || ''
-
-    // Get the system prompt
-    const systemPrompt = await getDefaultPrompt(patientInfo, language, latestUserMessage)
-
-    // Combine system prompt with custom prompt if provided
-    const finalSystemPrompt = customPrompt 
-      ? `${systemPrompt}\n\nAdditional Context:\n${customPrompt}`
-      : systemPrompt
-
-    // Create conversation messages array with proper types
+    const latestUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content || ''
+    
+    // Get the default system prompt
+    const defaultPrompt = await getDefaultPrompt(condition, latestUserMessage, language)
+    
+    // Combine prompts if custom prompt is provided
+    const systemPrompt = customPrompt ? `${defaultPrompt}\n\n${customPrompt}` : defaultPrompt
+    
     const conversationMessages = [
-      { role: 'system' as const, content: finalSystemPrompt },
-      ...messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }))
+      { role: 'system', content: systemPrompt },
+      ...messages
     ]
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
       messages: conversationMessages,
       temperature: 0.7,
       max_tokens: 500,
     })
 
-    return Response.json({ content: completion.choices[0].message.content })
-  } catch (error) {
+    return NextResponse.json(response.choices[0].message)
+  } catch (error: any) {
     console.error('Error in chat API:', error)
-    return Response.json(
-      { error: 'Failed to process chat request' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 } 
