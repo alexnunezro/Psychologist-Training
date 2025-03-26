@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readdir } from 'fs/promises'
 import { join } from 'path'
+import { getProcessingStatus } from '@/lib/upload-status'
 
 // In-memory storage for processing status
 // In a production environment, this should be replaced with a database
@@ -20,6 +21,8 @@ export async function GET() {
     const bookFiles = files.filter(file => 
       file.endsWith('.pdf') || file.endsWith('.epub')
     )
+
+    const processingStatus = getProcessingStatus()
 
     // Create status entries for new files
     bookFiles.forEach(filename => {
